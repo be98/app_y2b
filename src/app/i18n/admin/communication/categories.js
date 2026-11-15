@@ -1,0 +1,37 @@
+// 자동 생성 · 원본: web/language/64/admin/communication/categories.json
+// scripts/gen_i18n.py 로 재생성 — 직접 수정하지 말 것
+const admin_communication_categories = {
+  head_category_list: "카테고리 리스트",
+  head_category_edit: "카테고리 수정",
+  head_category_add: "카테고리 추가",
+  category_add: "카테고리 추가",
+  category_edit: "카테고리 추가",
+  category_delete: "카테고리 삭제",
+  category_save: "카테고리 저장",
+  text_category_id: "ID",
+  text_category_name: "카테고리",
+  text_description: "설명",
+  text_meta_title: "메타이름",
+  text_meta_description: "메타설명",
+  text_meta_keyword: "메타키워드",
+  text_parent_id: "부모카테고리",
+  text_image: "이미지",
+  text_sort_order: "순서",
+  text_status: "상태",
+  text_action: "",
+  text_category_edit: "수정",
+  text_attribute_id: "어트리뷰트id",
+  text_attribute_name: "어트리뷰트 이름",
+  text_attribute_add: "추가",
+  error_require_category_name: "카테고리 이름은 필수 사항입니다.",
+  error_require_meta_title: "메타 이름은 필수 사항입니다.",
+  error_invalid_parent_category: "자신의 하위카테고리를 부모카테고리로 설정할 수 없습니다.",
+  error_cannot_delete_category: "자신의 하위카테고리가 있어서 삭제할 수 없습니다.",
+  error_not_save_message: "다음 에러를 수정후 저장하세요.",
+  message_confirm_title: "확인",
+  message_confirm_delete: "카테고리를 삭제할까요?",
+  message_save_ok: "카테고리를 저장하였습니다.",
+  message_delete_ok: "카테고리를 삭제하였습니다.",
+};
+
+export default admin_communication_categories;

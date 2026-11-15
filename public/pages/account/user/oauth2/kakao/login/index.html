@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1,user-scalable=no">
+    <link rel="icon" href="/favicon.ico">
+    <title>소셜로그인</title>
+    <meta name="robots" content="noindex, nofollow">
+  </head>
+  <body>
+    <script>
+      // 서버에서 전달받은 값을 JS 전역변수로 노출
+      window.__SERVER_DATA__ = {
+        api_url: '{%=[q] api_url %}',
+      }
+    </script>
+    <div id="app"></div>
+    <script type="module" src="/src/pages/account/user/oauth2/kakao/login/index.js"></script>
+  </body>
+</html>

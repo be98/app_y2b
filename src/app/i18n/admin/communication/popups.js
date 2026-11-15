@@ -1,0 +1,36 @@
+// 자동 생성 · 원본: web/language/64/admin/communication/popups.json
+// scripts/gen_i18n.py 로 재생성 — 직접 수정하지 말 것
+const admin_communication_popups = {
+  head_popup_list: "팝업 리스트",
+  head_popup_add: "팝업 추가",
+  head_popup_edit: "팝업 수정",
+  popup_add: "팝업 추가",
+  popup_edit: "팝업 추가",
+  popup_delete: "팝업 삭제",
+  popup_save: "팝업 저장",
+  text_title: "제목",
+  text_description: "내용",
+  text_image: "이미지",
+  text_file: "파일",
+  text_popup_id: "팝업id",
+  text_writer: "작성자",
+  text_sort_order: "순서",
+  text_status: "상태",
+  text_date_added: "생성날짜",
+  text_date: "게시기간",
+  text_date_publish: "게시일",
+  text_date_unpublish: "게시취소일",
+  text_action: "",
+  text_popup_edit: "수정",
+  error_require_popup_title: "팝업 이름은 필수 사항입니다.",
+  error_require_popup_description: "글내용은 필수 사항입니다.",
+  error_no_data: "팝업이 없습니다.",
+  error_no_permission: "저장권한이 없습니다.",
+  error_not_save_message: "다음 에러를 수정후 저장하세요.",
+  message_confirm_title: "확인",
+  message_confirm_delete: "팝업을 삭제할까요?",
+  message_save_ok: "팝업을 저장하였습니다.",
+  message_delete_ok: "팝업을 삭제하였습니다.",
+};
+
+export default admin_communication_popups;

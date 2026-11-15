@@ -1,0 +1,37 @@
+// 자동 생성 · 원본: web/language/64/admin/communication/user_permissions.json
+// scripts/gen_i18n.py 로 재생성 — 직접 수정하지 말 것
+const admin_communication_user_permissions = {
+  head_user_permission_edit: "퍼미션 수정",
+  user_default_save: "기본 권한 저장",
+  user_permission_save: "권한 저장",
+  user_permission_add: "유저 권한 추가",
+  text_group_id: "그룹ID",
+  text_user_group: "유저그룹",
+  text_user_group_0: "로그인 안한 유저",
+  text_table_id: "게시판ID",
+  text_table_name: "게시판이름",
+  text_user_id: "유저ID",
+  text_name: "이름",
+  text_permission: "권한리스트",
+  text_route_name: "Route Name",
+  text_can_view: "Can View",
+  text_can_write: "Can Write",
+  text_user_save: "권한저장",
+  error_duplicate_user_id_permission: "유저id가 중복되어, 퍼미션 설정을 추가할 수 없습니다.",
+  error_duplicate_user_id_permission_2: "유저id가 중복되어, 퍼미션 설정을 할 수 없습니다.",
+  error_no_list_data: "데이터가 없습니다.",
+  error_invalid_input_data: "입력데이터 형식이 올바르지 않습니다.",
+  error_require_table_id: "게시판을 선택해주세요.",
+  error_require_user_id: "유저를 선택해주세요.",
+  error_cannot_add_permission_because_exist: "이미 권한설정이 추가된 유저입니다.",
+  error_not_save_message: "다음 에러를 수정후 추가하세요.",
+  message_confirm_title: "확인",
+  message_confirm_delete_permission: "게시판 권한을 삭제할까요? 만약, 삭제하면 기본권한으로 적용됩니다.",
+  message_default_user: "1) 게시판에 적용되는 기본 권한입니다. <br/>2) 게시판의 권한수정은 <a href='/admin/marketing/post/table_permission' style='border:1px solid #00f;color:#00f'>게시판권한</a>을 클릭해주세요.",
+  message_vendor_default_user: "1) 게시판에 적용되는 기본 권한입니다. <br/>2) 게시판의 권한수정은 <a href='/admin/vendor/marketing/post/table_permission' style='border:1px solid #00f;color:#00f'>게시판권한</a>을 클릭해주세요.",
+  message_individual_user: "1) 글쓰기 권한은 글추가와 자신글 수정의 권한을 말합니다. <br/>2) 권한설정의 우선순위는 유저설정-&gt;게시판설정-&gt;기본설정의 순으로 적용됩니다.",
+  message_save_ok: "게시판 권한을 저장하였습니다.",
+  message_delete_ok: "게시판 권한을 삭제하였습니다.",
+};
+
+export default admin_communication_user_permissions;

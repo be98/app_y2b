@@ -1,0 +1,38 @@
+// 자동 생성 · 원본: web/language/64/admin/communication/table_permissions.json
+// scripts/gen_i18n.py 로 재생성 — 직접 수정하지 말 것
+const admin_communication_table_permissions = {
+  head_table_permission_edit: "퍼미션 수정",
+  table_default_save: "기본 권한 저장",
+  table_permission_save: "권한 저장",
+  table_permission_add: "게시판 권한 추가",
+  text_group_id: "그룹ID",
+  text_user_group: "유저그룹",
+  text_user_group_0: "로그인 안한 유저",
+  text_table_id: "게시판ID",
+  text_table_name: "게시판이름",
+  text_owner: "소유자",
+  text_permission: "권한리스트",
+  text_route_name: "Route Name",
+  text_can_view: "Can View",
+  text_can_write: "Can Write",
+  text_table_save: "권한저장",
+  error_duplicate_table_id_permission: "게시판id가 중복되어, 퍼미션 설정을 추가할 수 없습니다.",
+  error_duplicate_table_id_permission_2: "게시판id가 중복되어, 퍼미션 설정을 할 수 없습니다.",
+  error_no_list_data: "데이터가 없습니다.",
+  error_invalid_input_data: "입력데이터 형식이 올바르지 않습니다.",
+  error_require_table_id: "게시판을 선택해주세요.",
+  error_cannot_add_permission_because_exist: "이미 권한설정이 추가된 게시판입니다.",
+  error_no_exist_table: "테이블이 없습니다.",
+  error_cannot_add_permission_because_no_owner: "권한이 없습니다.",
+  error_cannot_save_permission_because_no_owner: "권한이 없습니다.",
+  error_cannot_delete_permission_because_no_owner: "권한이 없습니다.",
+  error_not_save_message: "다음 에러를 수정후 추가하세요.",
+  message_confirm_title: "확인",
+  message_confirm_delete_permission: "게시판 권한을 삭제할까요? 만약, 삭제하면 기본권한으로 적용됩니다.",
+  message_default_table: "1) 기본 권한은 모든 게시판에 적용되는 권한입니다. <br/>2) 게시판을 새로 생성시 그 게시판의 개별권한을 설정하지 않으면 디폴트 권한으로 세팅됩니다.",
+  message_individual_table: "1) 글쓰기 권한은 글추가와 자신글 수정의 권한을 말합니다. <br/>2) 0그룹은 로그인 안한 그룹이며, <br/>3) 그룹마다 각 게시판의 권한을 설정할 수 있습니다.",
+  message_save_ok: "게시판 권한을 저장하였습니다.",
+  message_delete_ok: "게시판 권한을 삭제하였습니다.",
+};
+
+export default admin_communication_table_permissions;

@@ -1,0 +1,18 @@
+# https://y2b.tensweb.com/robots.txt
+# 공개 페이지(/user/...)는 허용, 관리자·로그인·API 는 크롤링 대상이 아니다.
+
+# 네이버 검색 로봇. 전용 블록이 있으면 * 블록을 무시하므로 규칙을 동일하게 둔다.
+User-agent: Yeti
+Allow: /
+Disallow: /admin/
+Disallow: /account/
+Disallow: /api/
+Disallow: /cache/
+
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /account/
+Disallow: /api/
+Disallow: /cache/
+

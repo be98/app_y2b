@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1,user-scalable=no">
+    <link rel="icon" href="/favicon.ico">
+    <title>y2b · 마이페이지</title>
+  </head>
+  <body>
+    <noscript>
+      <strong>JavaScript가 필요합니다. 브라우저에서 활성화해 주세요.</strong>
+    </noscript>
+    <div id="app"></div>
+    <!-- 로그인 사용자 정보를 window.__USER__ 로 주입한다 (app.js load_user_info 가 읽음) -->
+    <script src="/api/account/user/info/js"></script>
+    <script type="module" src="/src/pages/user/mypage/index.js"></script>
+  </body>
+</html>

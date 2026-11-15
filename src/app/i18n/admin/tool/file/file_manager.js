@@ -1,0 +1,37 @@
+// 자동 생성 · 원본: web/language/64/admin/tool/file/file_manager.json
+// scripts/gen_i18n.py 로 재생성 — 직접 수정하지 말 것
+const admin_tool_file_file_manager = {
+  head_file_manager: "파일 다이알로그",
+  text_go_up: "상위폴더로 이동",
+  text_reload: "다시 로딩",
+  text_upload: "서버로 파일전송",
+  text_new_folder: "폴더만들기",
+  text_delete: "삭제",
+  text_rename: "이름 바꾸기",
+  text_check_all: "선택",
+  column_filename: "파일명",
+  column_ext: "확장자",
+  column_size: "사이즈",
+  column_mtime: "수정일",
+  column_action: "",
+  error_folder_name_0: "폴더 이름을 입력해주세요.",
+  error_exist_folder: "동일한 이름의 폴더가 있습니다.",
+  error_cannot_mkdir: "폴더를 생성할 수 없습니다. 이미 있는 이름이거나 특수문자가 있는지 체크해 주세요.",
+  error_not_exist_folder: "폴더가 존재하지 않습니다. 업로드할 수 없습니다.",
+  error_exist_file: "같은 이름의 파일이 있으므로 업로드할 수 없습니다.",
+  error_cannot_delete: "지우려는 폴더 또는 파일중에 지워지않은 것이 있습니다. 폴더의 경우 내부에 파일이나 서브 폴더가 있으면 지울 수 없습니다.",
+  error_no_select: "파일 또는 폴더를 선택해야 합니다.",
+  error_rename_no_select: "폴더 또는 파일을 선택해주세요.",
+  error_rename_multi_select: "하나만 선택해야 이름바꾸기 명령을 실행할 수 있습니다.",
+  error_rename_0: "바꿀 이름을 입력해주세요.",
+  error_cannot_rename: "이미 있는 이름이거나 특수문자가 있는지 체크해 주세요.",
+  message_delete_ok: "삭제하였습니다.",
+  message_upload_ok: "업로드를 성공하였습니다.",
+  message_create_folder_ok: "폴더를 생성하였습니다.",
+  message_rename_ok: "이름을 바꾸었습니다.",
+  text_create_folder: "폴더 생성",
+  text_create_folder_message: "폴더 이름을 넣어주세요",
+  text_rename_message: "바꿀 이름을 넣어주세요",
+};
+
+export default admin_tool_file_file_manager;

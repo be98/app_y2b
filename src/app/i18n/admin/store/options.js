@@ -1,0 +1,35 @@
+// 자동 생성 · 원본: web/language/64/admin/store/options.json
+// scripts/gen_i18n.py 로 재생성 — 직접 수정하지 말 것
+const admin_store_options = {
+  head_option_list: "옵션 리스트",
+  head_option_edit: "옵션 수정",
+  head_option_add: "옵션 추가",
+  option_add: "옵션 추가",
+  option_edit: "옵션 수정",
+  option_delete: "옵션 삭제",
+  option_save: "옵션 저장",
+  text_option_edit: "수정",
+  text_image: "이미지",
+  text_option_id: "옵션id",
+  text_option_name: "옵션 이름",
+  text_option_value_name: "옵션값 이름",
+  text_admin_name: "만든이",
+  text_type: "유형",
+  text_code: "구분 코드",
+  text_sort_order: "순서",
+  text_status: "상태",
+  text_action: "",
+  error_require_code: "옵션 코드는 필수 사항입니다.",
+  error_unique_code: "중복되지 않는 유일한 코드를 입력해주세요.",
+  error_require_option_type: "옵션 유형은 필수 사항입니다.",
+  error_require_option_name: "옵션 이름은 필수 사항입니다.",
+  error_require_option_value_name: "옵션벨류 이름은 필수 사항입니다.",
+  error_require_meta_title: "메타 이름은 필수 사항입니다.",
+  error_not_save_message: "다음 에러를 수정후 저장하세요.",
+  message_confirm_title: "확인",
+  message_confirm_delete: "옵션을 삭제할까요?",
+  message_save_ok: "옵션을 저장하였습니다.",
+  message_delete_ok: "옵션을 삭제하였습니다.",
+};
+
+export default admin_store_options;

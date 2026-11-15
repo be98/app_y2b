@@ -1,0 +1,36 @@
+// 자동 생성 · 원본: web/language/64/app/admin/school/puzzle/contents.json
+// scripts/gen_i18n.py 로 재생성 — 직접 수정하지 말 것
+const app_admin_school_puzzle_contents = {
+  head_puzzle_list: "크로스퍼즐",
+  head_puzzle_add: "퍼즐 추가",
+  head_puzzle_edit: "퍼즐 수정",
+  puzzle_add: "퍼즐 추가",
+  puzzle_edit: "퍼즐 수정",
+  puzzle_delete: "퍼즐 삭제",
+  puzzle_save: "퍼즐 저장",
+  text_puzzle_edit: "수정",
+  text_puzzle_title: "퍼즐제목",
+  text_puzzle_id: "퍼즐id",
+  text_puzzle_type: "영역(과목)",
+  text_word_type: "단어구분",
+  text_level: "레벨(초,중,고)",
+  text_width: "가로",
+  text_height: "세로",
+  text_layout_data: "퍼즐데이터",
+  text_hint: "단어설명",
+  text_answer: "답",
+  error_require_puzzle_title: "강의 이름은 필수 사항입니다.",
+  error_require_puzzle_description: "글내용은 필수 사항입니다.",
+  error_require_meta_title: "메타 이름은 필수 사항입니다.",
+  error_need_category_id: "카테고리는 필수 사항입니다.",
+  error_need_course_id: "COURSE ID는 필수 사항입니다.",
+  error_no_parent_puzzle: "부모id에 해당하는 글이 존재하지 않습니다.",
+  error_no_data: "강의데이터가 없습니다.",
+  error_not_save_message: "다음 에러를 수정후 저장하세요.",
+  message_confirm_title: "확인",
+  message_confirm_delete: "퍼즐을 삭제할까요?",
+  message_save_ok: "퍼즐을 저장하였습니다.",
+  message_delete_ok: "퍼즐을 삭제하였습니다.",
+};
+
+export default app_admin_school_puzzle_contents;
