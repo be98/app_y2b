@@ -1,152 +1,90 @@
 <template>
-  <div class="mp-app">
-    <header class="mp-head">
-      <div class="mp-head-inner">
-        <q-btn flat round dense icon="arrow_back" aria-label="메인으로" @click="goMain" />
-        <span class="mp-title">마이페이지</span>
-      </div>
-    </header>
+  <q-page class="y-page-narrow" style="max-width: 720px">
+    <com-need-login v-if="!loggedIn" icon="settings" title="채널을 설정하려면 로그인하세요" />
 
-    <main class="mp-body">
-      <section class="mp-card mp-profile">
-        <div class="mp-avatar">{{ userInitial }}</div>
-        <div>
-          <div class="mp-name">{{ displayName || '이름 없음' }}</div>
-          <div class="mp-sub">{{ userName }}</div>
+    <template v-else>
+      <div class="y-title">채널 설정</div>
+      <div v-if="!channel" class="row justify-center q-my-xl"><q-spinner-dots size="40px" color="primary" /></div>
+
+      <q-card v-else flat bordered class="q-pa-md">
+        <div class="row items-center q-gutter-md q-mb-lg">
+          <com-avatar :name="form.name" :src="avatarUrl || channel.avatar" size="96px" />
+          <div>
+            <q-btn outline rounded no-caps icon="photo_camera" label="프로필 사진 바꾸기" @click="$refs.avatar.click()" />
+            <div class="text-caption y-muted q-mt-xs">JPG·PNG·WEBP, 2MB 이하, 정사각형 권장</div>
+            <input ref="avatar" type="file" accept="image/jpeg,image/png,image/webp" hidden @change="pickAvatar" />
+          </div>
         </div>
-      </section>
+        <q-input v-model="form.name" outlined label="채널 이름" maxlength="100" counter :error="!!err.name" :error-message="err.name" />
+        <q-input :model-value="'@' + channel.handle" outlined readonly label="핸들 (채널 주소)" class="q-mt-sm" hint="채널 주소에 쓰입니다">
+          <template #append><q-btn flat round dense icon="open_in_new" :href="channelHref" aria-label="내 채널 열기" /></template>
+        </q-input>
+        <q-input v-model="form.description" outlined type="textarea" autogrow label="채널 소개" maxlength="2000" counter class="q-mt-md" />
+        <div class="row justify-end q-mt-md">
+          <q-btn unelevated rounded no-caps color="primary" label="저장" :loading="saving" @click="save" />
+        </div>
+      </q-card>
 
-      <section class="mp-card mp-menu">
-        <q-item clickable @click="$refs.nickDialog.open()">
-          <q-item-section avatar><q-icon name="badge" /></q-item-section>
-          <q-item-section>닉네임 설정</q-item-section>
-          <q-item-section side>{{ nickName }}</q-item-section>
+      <q-card flat bordered class="q-mt-md">
+        <q-item>
+          <q-item-section avatar><q-icon name="person" /></q-item-section>
+          <q-item-section><q-item-label caption>로그인 아이디</q-item-label><q-item-label>{{ user.user_name }}</q-item-label></q-item-section>
         </q-item>
-      </section>
-
-      <q-btn unelevated color="negative" label="로그아웃" class="full-width" @click="doLogout" />
-    </main>
-
-    <com-nickname-dialog ref="nickDialog" />
-  </div>
+        <q-separator />
+        <q-item clickable @click="logout">
+          <q-item-section avatar><q-icon name="logout" color="negative" /></q-item-section>
+          <q-item-section class="text-negative">로그아웃</q-item-section>
+        </q-item>
+      </q-card>
+    </template>
+  </q-page>
 </template>
 
 <script>
-import comNicknameDialog from '@/components/comNicknameDialog.vue'
+import api from '@/app/y2b/api.js'
+import { channelUrl } from '@/app/y2b/format.js'
+import comAvatar from '@/components/y2b/comAvatar.vue'
+import comNeedLogin from '@/components/y2b/comNeedLogin.vue'
 
 export default {
   name: 'MyPageIndex',
-  components: { comNicknameDialog },
+  components: { comAvatar, comNeedLogin },
+  data() { return { channel: null, form: { name: '', description: '' }, avatarFile: null, avatarUrl: '', err: {}, saving: false } },
   computed: {
-    user() {
-      return this.$store.state.user
-    },
-    loggedIn() {
-      return this.user.user_id > 0
-    },
-    userName() {
-      return this.user.user_name
-    },
-    nickName() {
-      return this.user.nick_name
-    },
-    displayName() {
-      return this.nickName || this.userName
-    },
-    userInitial() {
-      return this.displayName ? this.displayName.trim().charAt(0).toUpperCase() : ''
-    },
+    user() { return this.$store.state.user },
+    loggedIn() { return this.user.user_id > 0 },
+    channelHref() { return this.channel ? channelUrl(this.channel.handle) : '' },
+  },
+  async created() {
+    if (!this.loggedIn) return
+    const r = await api.myChannel()
+    if (!r.success) return this.$q.notify({ message: r.message, color: 'negative' })
+    this.channel = r.channel
+    this.form = { name: r.channel.name, description: r.channel.description }
   },
   methods: {
-    goMain() {
-      this.$c.goto_page('/user/main')
+    pickAvatar(e) {
+      const f = e.target.files[0]
+      e.target.value = ''
+      if (!f) return
+      if (f.size > 2 * 1024 * 1024) return this.$q.notify({ message: '이미지는 2MB 까지입니다', color: 'negative' })
+      if (this.avatarUrl) URL.revokeObjectURL(this.avatarUrl)
+      this.avatarFile = f
+      this.avatarUrl = URL.createObjectURL(f)
     },
-    doLogout() {
-      this.$q.loading.show()
-      this.$c.io.post('/api/account/user/logout', {}).then((response) => {
-        if (response.data && response.data.success) {
-          this.goMain()
-        } else {
-          this.$q.loading.hide()
-          this.$q.notify({ message: '로그아웃에 실패했어요. 다시 시도해 주세요.', color: 'negative', position: 'top' })
-        }
-      })
+    async save() {
+      this.err = {}
+      this.saving = true
+      const r = await api.saveChannel({ ...this.form, avatar: this.avatarFile })
+      this.saving = false
+      if (!r.success) { this.err = r.error || {}; return this.$q.notify({ message: r.message, color: 'negative' }) }
+      this.channel = r.channel
+      this.avatarFile = null
+      this.$q.notify({ message: '저장했습니다', color: 'positive' })
     },
-  },
-  mounted() {
-    // 개인 화면 보호 — 사용자 정보는 HTML 의 /api/account/user/info/js 로 동기 주입되므로 바로 판단할 수 있다.
-    if (!this.loggedIn) this.goMain()
+    logout() {
+      this.$c.io.post('/api/account/user/logout', {}).then(() => { location.href = '/user/main' })
+    },
   },
 }
 </script>
-
-<style scoped>
-.mp-app {
-  min-height: 100vh;
-  background: #f5f7fa;
-  color: #1e293b;
-}
-.mp-head {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: #fff;
-  border-bottom: 1px solid #e2e8f0;
-}
-.mp-head-inner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: 640px;
-  height: 56px;
-  margin: 0 auto;
-  padding: 0 12px;
-}
-.mp-title {
-  font-size: 18px;
-  font-weight: 700;
-}
-.mp-body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 24px 16px 48px;
-}
-.mp-card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 16px;
-}
-.mp-menu {
-  padding: 4px;
-}
-.mp-profile {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.mp-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: #1976d2;
-  color: #fff;
-  font-size: 24px;
-  font-weight: 700;
-}
-.mp-name {
-  font-size: 18px;
-  font-weight: 700;
-}
-.mp-sub {
-  margin-top: 2px;
-  color: #94a3b8;
-  font-size: 14px;
-}
-</style>

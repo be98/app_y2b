@@ -1,0 +1,30 @@
+/* y2b 공통 — 색은 여기 변수만 쓴다 */
+:root {
+  --y-bg: #ffffff;
+  --y-fg: #0f0f0f;
+  --y-muted: #606060;
+  --y-line: #e5e5e5;
+  --y-soft: #f2f2f2;
+  --y-accent: #cc1f1a;
+}
+body { background: var(--y-bg); color: var(--y-fg); }
+
+.y-page { max-width: 1760px; margin: 0 auto; padding: 16px 16px 48px; }
+.y-page-narrow { max-width: 1100px; margin: 0 auto; padding: 16px 16px 48px; }
+.y-title { font-size: 20px; font-weight: 700; margin: 8px 0 16px; }
+.y-muted { color: var(--y-muted); }
+.y-grid {
+  display: grid;
+  gap: 32px 16px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.y-empty { padding: 64px 16px; text-align: center; color: var(--y-muted); }
+.y-empty .q-icon { font-size: 56px; margin-bottom: 8px; }
+.y-clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.y-link { color: inherit; text-decoration: none; }
+.y-link:hover { text-decoration: underline; }
+@media (max-width: 599px) {
+  .y-page, .y-page-narrow { padding: 8px 0 40px; }
+  .y-grid { grid-template-columns: 1fr; gap: 20px; }
+  .y-title { padding: 0 12px; }
+}

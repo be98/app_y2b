@@ -76,9 +76,11 @@ export default defineConfig({
 
   server: {
     proxy: {
-      '/api':   { target: 'https://y2b.tensweb.com', changeOrigin: true },
+      // Y2B_API=http://localhost:15109 npm run dev — ssh 터널(-L 15109:127.0.0.1:15109)로 서버 API 를 직접 부를 때
+      '/api':   { target: process.env.Y2B_API || 'https://y2b.tensweb.com', changeOrigin: true },
       '/cache': { target: 'https://y2b.tensweb.com', changeOrigin: true },
       '/image': { target: 'https://y2b.tensweb.com', changeOrigin: true },
+      '/video': { target: 'https://y2b.tensweb.com', changeOrigin: true },
     },
   },
 

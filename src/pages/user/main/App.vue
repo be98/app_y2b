@@ -1,27 +1,12 @@
 <template>
-    <div v-cloak>
-        <com-index />
-        <com-loading mode="hourglass"/>
-    </div>
+  <com-y2b-layout>
+    <com-index />
+  </com-y2b-layout>
 </template>
 
 <script>
-import comIndex from './comIndex.vue';
-import comLoading from '@/components/comLoading.vue';
-import loginData from '@/app/i18n/account/login.js';
-import $app from '@/app/app.js'
+import comY2bLayout from '@/components/y2b/comY2bLayout.vue'
+import comIndex from './comIndex.vue'
 
-export default {
-    name: 'App',
-    components: {
-        comIndex,
-        comLoading,
-    },
-    created() {
-        this.$c.$root = this;
-        // 모듈 경로를 ns로 등록 — 다른 API의 동일 키와 충돌하지 않음
-        this.$store.commit('set_i18n', { ns: 'account/login', dict: loginData });
-        $app.load_user_info(this);
-    },
-}
+export default { name: 'App', components: { comY2bLayout, comIndex } }
 </script>
