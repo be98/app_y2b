@@ -37,7 +37,7 @@
               <template #body-cell-target="p">
                 <q-td :props="p" style="max-width: 360px; white-space: normal">
                   <q-badge :color="p.row.target_type === 'video' ? 'blue-7' : 'teal'" :label="p.row.target_type === 'video' ? '영상' : '댓글'" class="q-mr-xs" />
-                  <a :href="fmt.watchUrl(p.row.video_id)" target="_blank" class="y-link">{{ p.row.target_text || '(삭제됨)' }}</a>
+                  <a href="#" class="y-link" @click.prevent="preview(p.row.video_id, p.row.target_type === 'comment' ? p.row.target_text : '')">{{ p.row.target_text || '(삭제됨)' }}</a>
                   <q-badge v-if="p.row.target_hidden" color="grey" label="숨김" class="q-ml-xs" />
                   <div v-if="p.row.same_count > 1" class="text-caption text-negative">같은 대상 신고 {{ p.row.same_count }}건</div>
                 </q-td>
@@ -79,9 +79,9 @@
               <template #body-cell-title="p">
                 <q-td :props="p" style="max-width: 420px; white-space: normal">
                   <div class="row no-wrap items-center q-gutter-sm">
-                    <img v-if="p.row.thumbnail" :src="p.row.thumbnail" class="y-adm-thumb" alt="" />
+                    <img v-if="p.row.thumbnail" :src="api.admin.mediaUrl(p.row.video_id, 'thumb')" class="y-adm-thumb" alt="" />
                     <div>
-                      <a :href="fmt.watchUrl(p.row.video_id)" target="_blank" class="y-link text-weight-medium">{{ p.row.title }}</a>
+                      <a href="#" class="y-link text-weight-medium" @click.prevent="preview(p.row.video_id)">{{ p.row.title }}</a>
                       <div class="text-caption text-grey-7">{{ p.row.channel_name }} · {{ fmt.visibilityLabel(p.row.visibility) }} · {{ fmt.bytes(p.row.file_size) }}</div>
                     </div>
                   </div>
@@ -105,6 +105,21 @@
         </q-card>
       </q-page>
     </q-page-container>
+
+    <!-- 숨긴 영상도 관리자 전용 주소로 재생해서 확인한다 -->
+    <q-dialog v-model="pv.visible">
+      <q-card style="width: 860px; max-width: 96vw">
+        <video v-if="pv.visible" :src="api.admin.mediaUrl(pv.id)" controls autoplay muted style="width: 100%; aspect-ratio: 16 / 9; background: #000; display: block"></video>
+        <q-card-section v-if="pv.comment" class="q-pt-md">
+          <div class="text-caption text-grey-7">신고된 댓글</div>
+          <div style="white-space: pre-wrap">{{ pv.comment }}</div>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat no-caps icon="open_in_new" label="사이트에서 보기" :href="fmt.watchUrl(pv.id)" target="_blank" />
+          <q-btn flat no-caps label="닫기" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-layout>
 </template>
 
@@ -116,7 +131,7 @@ export default {
   name: 'AdminY2bMain',
   data() {
     return {
-      fmt, ready: false, adminName: '', tab: 'reports', summary: {}, loading: { reports: false, videos: false },
+      fmt, api, pv: { visible: false, id: 0, comment: '' }, ready: false, adminName: '', tab: 'reports', summary: {}, loading: { reports: false, videos: false },
       reports: [], rStatus: 'open', rPage: 1, rPages: 1,
       videos: [], vKeyword: '', vHidden: '', vVis: '', vPage: 1, vPages: 1, vTotal: 0,
       reportCols: [
@@ -178,6 +193,10 @@ export default {
       Object.assign(this, { videos: r.list, vPage: r.page, vTotal: r.total, vPages: Math.max(1, Math.ceil(r.total / r.limit)), summary: r.summary })
     },
     refresh() { this.loadReports(this.rPage); this.loadVideos(this.vPage) },
+    preview(id, comment = '') {
+      if (!id) return this.$q.notify({ message: '삭제된 영상입니다', color: 'dark' })
+      this.pv = { visible: true, id, comment }
+    },
     async handle(row, action) {
       const r = await api.admin.handleReport(row.report_id, action)
       if (!r.success) return this.fail(r)

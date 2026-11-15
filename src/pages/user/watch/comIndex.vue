@@ -9,7 +9,13 @@
 
     <div v-else class="y-watch">
       <div class="y-main">
-        <com-video-player :key="video.video_id" :video="video" @viewed="viewed" />
+        <!-- 관리자가 숨긴 영상은 파일이 공개 경로에서 빠져 있어 주인도 재생할 수 없다 -->
+        <div v-if="video.is_hidden" class="y-hidden-box">
+          <q-icon name="visibility_off" size="48px" />
+          <div class="text-subtitle1 text-weight-bold q-mt-sm">관리자가 숨긴 영상입니다</div>
+          <div class="text-caption">신고 검토 결과 숨김 처리되어 다른 사람에게 보이지 않고 재생도 되지 않습니다.</div>
+        </div>
+        <com-video-player v-else :key="video.video_id" :video="video" @viewed="viewed" />
 
         <div v-if="video.visibility !== 'public' || video.is_hidden" class="q-mt-sm row q-gutter-xs">
           <q-chip v-if="video.visibility !== 'public'" dense square :icon="video.visibility === 'private' ? 'lock' : 'link'">{{ fmt.visibilityLabel(video.visibility) }}</q-chip>
@@ -123,6 +129,7 @@ export default {
 <style scoped>
 .y-watch { display: flex; gap: 24px; align-items: flex-start; }
 .y-main { flex: 1; min-width: 0; }
+.y-hidden-box { aspect-ratio: 16 / 9; border-radius: 12px; background: #222; color: #ddd; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; }
 .y-side { width: 402px; flex: none; }
 .y-vtitle { font-size: 20px; line-height: 28px; font-weight: 700; margin: 12px 0 8px; word-break: break-word; }
 .y-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }

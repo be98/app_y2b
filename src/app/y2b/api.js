@@ -66,5 +66,7 @@ export default {
     hideComment: (id, hidden) => post(`${A}/comments/${id}/hide`, { hidden: hidden ? 1 : 0 }),
     reports: (params) => get(A + '/reports', params),
     handleReport: (id, action) => post(`${A}/reports/${id}`, { action }),
+    // 숨긴 영상도 볼 수 있는 관리자 전용 파일 주소
+    mediaUrl: (id, kind = 'file') => `${A}/videos/${id}/media?kind=${kind}`,
   },
 }
