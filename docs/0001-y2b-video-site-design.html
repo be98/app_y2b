@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>y2b — 누구나 올리는 영상 사이트 설계</title>
+<style>
+:root { --bg:#fff; --fg:#1d1d1f; --muted:#666; --line:#e3e3e8; --code:#f5f5f7; --accent:#c4302b; }
+@media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#9a9aa5; --line:#2e2e36; --code:#22222a; --accent:#ff6b63; } }
+body { background:var(--bg); color:var(--fg); font:15px/1.7 -apple-system,"Malgun Gothic",sans-serif; max-width:880px; margin:0 auto; padding:24px 16px 64px; }
+h1 { border-bottom:3px solid var(--accent); padding-bottom:8px; }
+h2 { margin-top:2em; border-bottom:1px solid var(--line); padding-bottom:4px; }
+h3 { margin-top:1.6em; }
+code { background:var(--code); padding:1px 5px; border-radius:4px; font-size:.92em; }
+pre { background:var(--code); padding:12px; border-radius:6px; overflow-x:auto; }
+pre code { padding:0; }
+table { border-collapse:collapse; width:100%; display:block; overflow-x:auto; }
+th, td { border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top; }
+th { background:var(--code); }
+blockquote { color:var(--muted); border-left:3px solid var(--line); margin:0; padding-left:12px; }
+li.todo { list-style:none; margin-left:-1.2em; }
+</style>
+</head>
+<body>
+<h1>y2b — 누구나 올리는 영상 사이트 설계</h1>
+<p>작성 2026-11-15</p>
+<h2>목적</h2>
+<p>유튜브처럼 <strong>누구나 가입해서 영상을 올리고 보는 사이트</strong>. 가입 → 채널 자동 생성 → 업로드 → 공개 → 다른 사람이 보고 구독·좋아요·댓글.</p>
+<h2>목표 / 비목표</h2>
+<ul>
+<li>목표: 업로드·재생·홈(최신·인기)·시청 페이지(조회수, 좋아요/싫어요, 댓글, 구독, 다음 영상)·채널·구독 피드·검색·시청 기록·내 영상 관리·신고 / 관리자 숨김·신고 처리</li>
+<li>비목표: 라이브, 쇼츠, 재생목록, 알림, 수익화, 자막</li>
+<li>실패로 보는 것: 업로드한 영상이 안 나오거나, 비공개 영상이 목록·검색에 노출되거나, 배포할 때 업로드 영상이 사라지는 것</li>
+</ul>
+<h2>제약</h2>
+<ul>
+<li>서버 tensweb.com, <code>/home/www/html/fa_app/app_y2b</code>, FastAPI + asyncpg, DB <code>a3_y2b</code>, 포트 15109, 도메인 <code>y2b.tensweb.com</code> (nginx 등록 완료)</li>
+<li>2코어 / 3.8GB / 디스크 여유 38GB, <strong>ffmpeg 없음</strong>, nginx <code>client_max_body_size 50M</code></li>
+<li>서버 코드는 git 이 아니다 → 작업 전 <code>_backup/&lt;날짜&gt;_&lt;내용&gt;</code> 으로 복사</li>
+<li>배포: 프런트는 <code>deploy.ps1</code> → <code>deploy_front.yml</code>. <code>wwwroot/assets</code>, <code>wwwroot/pages</code> 는 rsync, <code>wwwroot/public</code> 은 릴리스 심볼릭 링크. <strong><code>wwwroot/video</code> 는 배포가 건드리지 않는 영구 폴더</strong></li>
+<li>모델은 <code>web/models/app/y2b/*.py</code> 에 만들고 테이블을 먼저 생성한 뒤 서버를 실행한다 (기존 <code>install.create_table_sql</code> / <code>create_index_sqls</code> 사용)</li>
+</ul>
+<h2>방식 (Approaches)</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>방식</th>
+<th>장단점</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>720p MP4 하나로 변환</td>
+<td>모든 형식 재생, 변환 대기 수 분, ffmpeg 필요</td>
+</tr>
+<tr>
+<td>B</td>
+<td>HLS 360/720/1080</td>
+<td>유튜브식 적응 화질, 변환 시간·디스크 3배</td>
+</tr>
+<tr>
+<td><strong>C</strong></td>
+<td><strong>변환 없이 MP4 만 허용</strong></td>
+<td>단순·부하 없음, 휴대폰 HEVC/MOV 는 거부</td>
+</tr>
+</tbody>
+</table>
+<p><strong>결정(사용자): 실제 운영은 C, B 는 코드만 준비하고 끈다.</strong>
+- <code>web.json</code> 의 <code>"video": {"transcode": "none", "max_mb": 500}</code>. <code>"hls"</code> 로 바꾸고 ffmpeg 를 설치하면 B 가 동작.
+- B 준비분: <code>library/y2b_transcode.py</code> (ffmpeg 명령 구성, 360/720/1080 HLS + master.m3u8, 상태 갱신), <code>shell/y2b_transcode_worker.py</code> (status='queued' 를 하나씩 처리하는 루프). 지금은 호출되지 않는다. 플레이어는 영상에 <code>hls_path</code> 가 있으면 hls.js 로, 없으면 MP4 로 재생하도록 분기만 둔다.</p>
+<h2>결정된 동작</h2>
+<ul>
+<li><strong>업로드 (C)</strong>: 브라우저가 파일을 10MB 조각으로 나눠 <code>POST /api/user/app/y2b/upload/chunk</code> 로 보낸다 (nginx 50M 한도 유지). 마지막 조각 후 <code>.../upload/finish</code> 에서 합쳐 MP4 시그니처(<code>ftyp</code>)를 확인하고 <code>wwwroot/video/&lt;yyyymm&gt;/&lt;랜덤32자&gt;.mp4</code> 로 옮긴다. 확장자 mp4 / 500MB 초과는 거부.</li>
+<li><strong>썸네일·재생 시간</strong>: 브라우저가 <code>&lt;video&gt;</code> + canvas 로 1초 지점을 캡처(jpg)하고 duration 을 읽어 함께 보낸다. 사용자가 이미지 파일로 바꿀 수 있다. (내 판단: ffmpeg 없이 C 를 돌리기 위해)</li>
+<li><strong>공개 범위</strong>: public(목록·검색 노출) / unlisted(링크로만) / private(본인만). 파일명이 추측 불가한 랜덤이라 nginx 정적 제공으로 충분하다고 본다 (private 영상 파일 URL 을 알면 볼 수 있음 — 수용).</li>
+<li><strong>조회수</strong>: 시청 페이지에서 5초 이상 재생되면 1회. 같은 사용자(비로그인은 세션)·같은 영상은 하루 1회.</li>
+<li><strong>채널</strong>: 가입 후 첫 로그인 시 자동 생성 (이름 = 회원 이름, handle = <code>u&lt;user_id&gt;</code>). 채널명·소개·프로필 이미지 수정 가능.</li>
+<li><strong>댓글</strong>: 1단계 답글까지. 본인 삭제, 관리자 숨김.</li>
+<li><strong>신고</strong>: 영상·댓글 대상, 사유 선택 + 메모. 관리자가 처리(숨김/기각).</li>
+<li><strong>인기</strong>: 최근 7일 업로드 중 조회수 + 좋아요×5 순.</li>
+<li><strong>검색</strong>: 제목·설명·채널명 ilike (데이터가 적을 동안 충분, 나중에 tsvector).</li>
+</ul>
+<h2>데이터 (테이블 접두사 <code>yt_</code>)</h2>
+<ul>
+<li><code>yt_channel</code> channel_id, user_id(unique), name, handle(unique), description, avatar, subscriber_count, video_count, date_added</li>
+<li><code>yt_video</code> video_id, channel_id, user_id, title, description, file_path, file_size, hls_path, duration, thumbnail, visibility, status(ready/queued/processing/failed), is_hidden, view_count, like_count, dislike_count, comment_count, date_added, date_modified</li>
+<li><code>yt_comment</code> comment_id, video_id, user_id, parent_id, content, is_hidden, like_count, date_added</li>
+<li><code>yt_reaction</code> video_id + user_id (unique), value(1/-1)</li>
+<li><code>yt_subscription</code> channel_id + user_id (unique), date_added</li>
+<li><code>yt_view</code> video_id, user_id, session_key, view_date (unique: video_id+user_id+session_key+view_date) — 조회수 중복 방지</li>
+<li><code>yt_history</code> user_id + video_id (unique), date_watched</li>
+<li><code>yt_report</code> report_id, target_type(video/comment), target_id, user_id, reason, memo, status(open/hidden/rejected), date_added, date_done</li>
+<li><code>yt_upload</code> upload_id(랜덤), user_id, filename, total_size, received, date_added — 조각 업로드 진행 상태</li>
+</ul>
+<h2>API</h2>
+<ul>
+<li>사용자 <code>/api/user/app/y2b/</code>: <code>home</code>, <code>videos/{video_id}</code>, <code>videos/{video_id}/view</code>, <code>.../reaction</code>, <code>.../comments</code>, <code>comments/{comment_id}</code>, <code>channels/{handle}</code>, <code>channels/{channel_id}/subscribe</code>, <code>me/channel</code>, <code>me/videos</code>, <code>me/videos/{video_id}</code>, <code>feed/subscriptions</code>, <code>history</code>, <code>search</code>, <code>upload/chunk</code>, <code>upload/finish</code>, <code>reports</code></li>
+<li>관리자 <code>/api/admin/app/y2b/</code>: <code>videos</code>, <code>videos/{id}/hide</code>, <code>comments/{id}/hide</code>, <code>reports</code>, <code>reports/{id}</code></li>
+<li>응답 <code>{success, message, error:{}}</code> (기존 규약)</li>
+</ul>
+<h2>화면 (클라이언트 <code>app_y2b</code>)</h2>
+<p><code>/user/main</code>(홈) · <code>/user/watch?v=</code> · <code>/user/channel?c=</code> · <code>/user/upload</code> · <code>/user/studio</code>(내 영상) · <code>/user/subscriptions</code> · <code>/user/history</code> · <code>/user/search?q=</code> · <code>/user/mypage</code> · <code>/admin/app/y2b/main</code>(영상·신고 관리). 공통 상단바(로고, 검색, 업로드, 로그인/프로필)와 왼쪽 메뉴는 공통 컴포넌트. 각 페이지는 서버에 <code>controllers/user/&lt;경로&gt;/index.py</code> (render_html) 가 필요하다.</p>
+<h2>정리</h2>
+<ul>
+<li>서버의 알바 코드 삭제: <code>library/alba*.py</code>, <code>controllers/api/user/app/alba</code>, <code>controllers/api/admin/app/alba</code>, <code>controllers/admin/app/alba</code>, <code>shell/__*alba*.py</code> (백업 후)</li>
+<li><code>../aca/deploy/vars/apps.yml</code> 에 app_y2b 항목이 없다 → 배포 전에 추가 필요 (aca 저장소, 사용자 확인 후)</li>
+</ul>
+<h2>빌더에게 남긴 것</h2>
+<p>컴포넌트 분할, 정확한 SQL, 스타일(Quasar 기본 + 다크/라이트), 에러 문구.</p>
+</body>
+</html>

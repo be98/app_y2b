@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>y2b 영상 사이트 Implementation Plan</title>
+<style>
+:root { --bg:#fff; --fg:#1d1d1f; --muted:#666; --line:#e3e3e8; --code:#f5f5f7; --accent:#c4302b; }
+@media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#9a9aa5; --line:#2e2e36; --code:#22222a; --accent:#ff6b63; } }
+body { background:var(--bg); color:var(--fg); font:15px/1.7 -apple-system,"Malgun Gothic",sans-serif; max-width:880px; margin:0 auto; padding:24px 16px 64px; }
+h1 { border-bottom:3px solid var(--accent); padding-bottom:8px; }
+h2 { margin-top:2em; border-bottom:1px solid var(--line); padding-bottom:4px; }
+h3 { margin-top:1.6em; }
+code { background:var(--code); padding:1px 5px; border-radius:4px; font-size:.92em; }
+pre { background:var(--code); padding:12px; border-radius:6px; overflow-x:auto; }
+pre code { padding:0; }
+table { border-collapse:collapse; width:100%; display:block; overflow-x:auto; }
+th, td { border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top; }
+th { background:var(--code); }
+blockquote { color:var(--muted); border-left:3px solid var(--line); margin:0; padding-left:12px; }
+li.todo { list-style:none; margin-left:-1.2em; }
+</style>
+</head>
+<body>
+<h1>y2b 영상 사이트 Implementation Plan</h1>
+<blockquote>
+<p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code>- [ ]</code>) syntax for tracking.</p>
+</blockquote>
+<p><strong>Goal:</strong> 누구나 가입해 MP4 를 올리고 보는 영상 사이트 (서버 FastAPI + 클라이언트 Vue/Quasar)</p>
+<p><strong>Architecture:</strong> 서버 <code>tensweb.com:/home/www/html/fa_app/app_y2b</code> 에 <code>models/app/y2b</code> 모델 9개, <code>library/y2b.py</code> 공통 모듈, <code>controllers/api/user/app/y2b/*</code>·<code>controllers/api/admin/app/y2b/*</code> API. 영상 파일은 영구 폴더 <code>wwwroot/video</code> 에 두고 nginx 가 정적 제공(Range 지원). 클라이언트는 기존 멀티페이지 구조에 페이지 9개 + 관리자 1개.</p>
+<p><strong>Tech Stack:</strong> Python 3.13.9 / FastAPI / asyncpg / PostgreSQL <code>a3_y2b</code> · Vue 3 Options API / Quasar 2 / Vite 7</p>
+<p><strong>Spec:</strong> <code>docs/0001-y2b-video-site-design.html</code></p>
+<h2>Global Constraints</h2>
+<ul>
+<li>테이블 접두사 <code>yt_</code>, 모델 파일은 <code>web/models/app/y2b/&lt;테이블명에서 yt_ 뺀 이름&gt;.py</code>, 기존 <code>model.Model</code> 형식(<code>__table__</code>, <code>__columns__</code>, <code>__index__</code>)</li>
+<li>응답 <code>{success, message, error:{}}</code>, 실패는 <code>error_code</code> 포함</li>
+<li><code>web.json</code> → <code>"video": {"transcode": "none", "max_mb": 500}</code>; transcode 가 <code>"hls"</code> 가 아니면 B 경로는 절대 호출되지 않는다</li>
+<li>업로드 조각 10MB, MP4 만(<code>ftyp</code> 확인), 최대 500MB</li>
+<li>서버 코드는 git 이 아님 → 작업 전 <code>_backup/20261115_before_y2b</code> 복사</li>
+<li>서비스 TZ Asia/Seoul, 날짜는 <code>now()</code> naive 로컬값 저장 (alba 와 동일)</li>
+<li>테스트 프레임워크가 없다 → 각 서버 태스크는 <code>shell/y2b_smoke.py</code>(httpx 로 127.0.0.1:15109 호출) 의 해당 단계를 추가해 검증</li>
+</ul>
+<h2>Review Focus</h2>
+<ol>
+<li>private/unlisted 영상이 home·search·channel·feed 목록에 나오면 안 된다 → smoke: 비공개 업로드 후 목록 3종에서 없음 확인</li>
+<li>남의 영상 수정·삭제·남의 댓글 삭제 시도 → no_permission → smoke 에 포함</li>
+<li>조각 순서가 어긋나거나 중간 조각 누락 후 finish → <code>upload_incomplete</code> 로 거부, 임시파일 정리</li>
+<li>MP4 가 아닌 파일(확장자만 .mp4) → <code>not_mp4</code> 거부</li>
+<li>관리자 숨김(is_hidden=1) 영상은 시청 페이지에서도 본인 외 <code>no_data</code> → smoke 에 포함</li>
+</ol>
+<hr />
+<h3>Task 1: 서버 정리·설정</h3>
+<p><strong>Files:</strong> 삭제 <code>web/library/alba*.py</code>, <code>web/controllers/{api/user/app,api/admin/app,admin/app}/alba</code>, <code>shell/__*alba*.py</code> · 수정 <code>web.json</code>
+- [ ] <code>_backup/20261115_before_y2b/</code> 로 <code>web shell web.json</code> 복사
+- [ ] 알바 파일 삭제, <code>grep -rl "alba" web shell</code> 결과가 없어야 함 (CLAUDE.md 는 Task 7 에서 갱신)
+- [ ] <code>web.json</code> 에 video 설정 추가, <code>mkdir -p wwwroot/video wwwroot/tmp/y2b_upload</code></p>
+<h3>Task 2: 모델 + 테이블 생성</h3>
+<p><strong>Files:</strong> Create <code>web/models/app/y2b/{channel,video,comment,reaction,subscription,view,history,report,upload}.py</code>, <code>shell/y2b_create_tables.py</code>
+<strong>Produces:</strong> 각 모델 <code>Model(handler)</code> + <code>get_&lt;name&gt;(id)</code>, <code>insert_get_id</code>, <code>update(id, data)</code>, <code>delete(id)</code> (기본 CRUD 는 alba job.py 형식). 질의 메서드는 Task 4~6 에서 필요한 것만 추가.
+- [ ] 컬럼은 spec "데이터" 절 그대로. unique 인덱스: channel.user_id, channel.handle, reaction(video_id,user_id), subscription(channel_id,user_id), view(video_id,user_id,session_key,view_date), history(user_id,video_id)
+- [ ] <code>shell/y2b_create_tables.py</code> = alba 의 <code>__create_alba_tables.py</code> 를 y2b 경로로 (없는 테이블만 생성)
+- [ ] 실행 → <code>yt_</code> 테이블 9개 생성 확인 (<code>psql -c "\dt yt_*"</code>)</p>
+<h3>Task 3: 공통 모듈 + B 준비</h3>
+<p><strong>Files:</strong> Create <code>web/library/y2b.py</code>, <code>web/library/y2b_transcode.py</code>, <code>shell/y2b_transcode_worker.py</code>
+<strong>Produces (<code>library/y2b.py</code>):</strong> <code>now()</code>, <code>fail(self, code, msg, error=None)</code>, <code>ok(self, data)</code>, <code>out/outs/to_db</code>, <code>async auth(self) -&gt; (user_id, err)</code>, <code>async ensure_channel(self, user_id) -&gt; channel dict</code>, <code>async get_video_for(self, video_id, viewer_id) -&gt; video|None</code> (hidden·private 규칙 적용), <code>video_cfg(self) -&gt; {'transcode','max_mb'}</code>, <code>public_where(alias) -&gt; str</code> (<code>visibility='public' and is_hidden=0 and status='ready'</code>)
+<strong>Produces (<code>y2b_transcode.py</code>):</strong> <code>build_hls_cmd(src, out_dir) -&gt; list[str]</code>, <code>async transcode(self, video_id)</code>; 상단 주석에 켜는 방법
+- [ ] 작성 후 <code>python -c "import library.y2b, library.y2b_transcode"</code> 성공</p>
+<h3>Task 4: 업로드·내 채널·내 영상 API</h3>
+<p><strong>Files:</strong> <code>controllers/api/user/app/y2b/upload/{chunk,finish}.py</code>, <code>me/channel.py</code>, <code>me/videos/index.py</code>, <code>me/videos/{video_id}/index.py</code>
+- [ ] chunk: Form(upload_id?, index, total, filename, total_size) + File → 첫 조각이면 yt_upload 생성·upload_id 반환, 조각은 <code>tmp/y2b_upload/&lt;id&gt;.&lt;index&gt;</code>
+- [ ] finish: Form(upload_id, title, description, visibility, duration) + File(thumbnail jpg) → 조각 합치기·검증 → <code>wwwroot/video/&lt;yyyymm&gt;/&lt;rand32&gt;.mp4</code>, 썸네일 <code>.jpg</code> 같은 폴더, yt_video insert(status ready, transcode=hls 면 queued) → video_id
+- [ ] me/videos GET 목록 / PUT 수정(title, description, visibility, thumbnail) / DELETE (파일까지 삭제, 카운트 갱신)
+- [ ] smoke 단계 1: 로그인 → 업로드(소형 mp4) → 목록 → 수정 → 비MP4 거부</p>
+<h3>Task 5: 시청·소셜 API</h3>
+<p><strong>Files:</strong> <code>controllers/api/user/app/y2b/{home,search,history,reports}.py</code>, <code>videos/{video_id}/{index,view,reaction,comments}.py</code>, <code>comments/{comment_id}.py</code>, <code>channels/{handle}.py</code>, <code>channels/{channel_id}/subscribe.py</code>, <code>feed/subscriptions.py</code>
+- [ ] home: <code>latest</code>(최신 24), <code>popular</code>(7일, view+like*5) / search q / feed / history GET·DELETE
+- [ ] videos/{id}: 영상+채널+내 reaction+구독여부+next 12개 / view POST(하루 1회 규칙) / reaction POST value 1·-1·0 / comments GET·POST(parent_id) / comments/{id} DELETE(본인)
+- [ ] channels/{handle}: 채널+public 영상 / subscribe POST·DELETE (자기 채널 구독 불가)
+- [ ] reports POST(target_type, target_id, reason, memo)
+- [ ] smoke 단계 2: Review Focus 1·2·5 포함</p>
+<h3>Task 6: 관리자 API</h3>
+<p><strong>Files:</strong> <code>library/y2b_admin.py</code>(admin_common 으로 auth), <code>controllers/api/admin/app/y2b/{videos/index.py, videos/{video_id}/hide.py, comments/{comment_id}/hide.py, reports/index.py, reports/{report_id}.py}</code>, <code>controllers/admin/app/y2b/main/index.py</code>
+- [ ] hide POST hidden=1|0, reports GET status 필터, reports/{id} POST action=hide|reject
+- [ ] smoke 단계 3</p>
+<h3>Task 7: 페이지 컨트롤러·서비스 기동</h3>
+<p><strong>Files:</strong> <code>controllers/user/{watch,channel,upload,studio,subscriptions,history,search,mypage}/index.py</code> (render_html), <code>CLAUDE.md</code> 갱신
+- [ ] <code>sudo cp app_y2b.service /etc/systemd/system/ &amp;&amp; systemctl enable --now app_y2b</code> → <code>curl 127.0.0.1:15109/api/system/health</code>
+- [ ] smoke 전체 통과</p>
+<h3>Task 8: 클라이언트 공통</h3>
+<p><strong>Files:</strong> <code>src/app/y2b/api.js</code>, <code>src/app/y2b/format.js</code>(조회수 1.2천, n일 전, 0:00 시간), <code>src/components/y2b/{comY2bLayout,comVideoCard,comVideoPlayer}.vue</code>
+- [ ] Layout: 상단바(로고→/user/main, 검색→/user/search?q=, 업로드, 로그인/프로필 메뉴) + 왼쪽 메뉴(홈·구독·기록·내 영상), 모바일 접힘
+- [ ] Player: <code>hls_path</code> 있으면 hls.js(동적 import), 없으면 <code>&lt;video src=file_path controls&gt;</code>; 5초 재생 시 <code>view</code> emit</p>
+<h3>Task 9: 사용자 페이지</h3>
+<p><strong>Files:</strong> <code>public/pages/user/&lt;p&gt;/index.html</code> + <code>src/pages/user/&lt;p&gt;/{index.js,App.vue,comIndex.vue}</code> for main(수정), watch, channel, upload, studio, subscriptions, history, search, mypage(수정)
+- [ ] upload: 파일 선택 → mp4·500MB 확인 → canvas 썸네일·duration → 10MB 조각 진행률 → 정보 입력 → finish
+- [ ] <code>npm run build</code> 성공, <code>dist/public/pages/user/*</code> 9개</p>
+<h3>Task 10: 관리자 페이지</h3>
+<p><strong>Files:</strong> <code>src/pages/admin/app/y2b/main/comIndex.vue</code>(탭: 영상 / 신고)
+- [ ] build 성공</p>
+<h3>Task 11: 확인·배포 준비</h3>
+<ul>
+<li class="todo">☐ dev 서버로 실제 흐름(가입→업로드→시청→댓글→구독→신고→관리자 처리) 브라우저 확인 (ego-browser)</li>
+<li class="todo">☐ 배포는 <code>../aca/deploy/vars/apps.yml</code> 에 app_y2b 추가가 필요 → 사용자 확인 후</li>
+</ul>
+</body>
+</html>
