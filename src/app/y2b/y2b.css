@@ -19,7 +19,7 @@ body { background: var(--y-bg); color: var(--y-fg); }
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
 }
 .y-empty { padding: 64px 16px; text-align: center; color: var(--y-muted); }
-.y-empty .q-icon { font-size: 56px; margin-bottom: 8px; }
+.y-empty > .q-icon { font-size: 56px; margin-bottom: 8px; }
 .y-clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .y-link { color: inherit; text-decoration: none; }
 .y-link:hover { text-decoration: underline; }
