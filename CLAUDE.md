@@ -18,6 +18,10 @@ Vue 3 (Options API) · Quasar 2 · Vuex 4 · mitt(`$emitter`) · Vite 7 멀티�
 - 응답은 `{ success, message, error_code, error:{필드:메시지} }`
 - 컴포넌트 접두사: `com`(공통) / `el`(page_elements). Quasar 컴포넌트 우선, 주석은 WHY 가 필요할 때만 한국어로
 
-## 영상
-- 지금은 MP4 그대로 재생(C 방식). 업로드는 10MB 조각, 썸네일·재생 시간은 브라우저가 canvas 로 만든다
-- HLS(B 방식)는 서버 web.json `video.transcode` 로 켜는 준비만 되어 있다. 플레이어는 `hls_path` 가 있으면 HLS 로 재생
+## 영상·파일 (file_server)
+- 영상·썸네일·프로필 이미지는 모두 file_server(`sme0582.duckdns.org`, 앱 `y2b`)에 비공개로 있다. 연동 규칙은 `file_server/docs/0007-앱-연동-가이드.html`
+- API 응답의 `file_path`·`thumbnail`·`avatar`·`channel_avatar`·`author_avatar`·`hls_path` 는 보기 토큰이 붙은 완성 주소(약 6시간 유효)다. 그대로 `src` 에 쓰고 저장하거나 고치지 않는다
+- 업로드: `api.upload()` 가 `upload/start` → file_server `/api/upload/chunk` 로 10MB 조각 직접 전송(이어 올리기·토큰 갱신 `renew`) → `upload/finish`. 실패하면 `upload/cancel`.
+  file_server 관리 화면에서 y2b 의 브라우저 업로드를 켜고 origins 에 사이트 주소(개발이면 `http://localhost:포트`)가 있어야 한다
+- 썸네일·재생 시간은 브라우저가 canvas 로 만든다. MP4 그대로 재생하고, 주소가 만료되어 재생 오류가 나면 플레이어가 시청 정보를 다시 받아 이어서 재생한다
+- HLS 는 나중에 file_server 업로드 옵션으로 붙인다. 플레이어는 `hls_path` 가 있으면 hls.js 로 재생하고 조각 요청에 범위 토큰을 붙인다

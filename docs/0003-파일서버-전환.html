@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>파일서버 전환</title>
+<style>
+:root { --bg:#fff; --fg:#1d1d1f; --muted:#666; --line:#e3e3e8; --code:#f5f5f7; --accent:#c4302b; --warn:#9a6700; }
+@media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#9a9aa5; --line:#2e2e36; --code:#22222a; --accent:#ff6b63; --warn:#d29922; } }
+body { background:var(--bg); color:var(--fg); font:15px/1.7 -apple-system,"Malgun Gothic",sans-serif; max-width:880px; margin:0 auto; padding:24px 16px 64px; }
+h1 { border-bottom:3px solid var(--accent); padding-bottom:8px; }
+h2 { margin-top:2em; border-bottom:1px solid var(--line); padding-bottom:4px; }
+h3 { margin-top:1.6em; }
+code { background:var(--code); padding:1px 5px; border-radius:4px; font-size:.92em; }
+pre { background:var(--code); padding:12px; border-radius:6px; overflow-x:auto; }
+pre code { padding:0; }
+table { border-collapse:collapse; width:100%; display:block; overflow-x:auto; }
+th, td { border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top; }
+th { background:var(--code); }
+blockquote { color:var(--muted); border-left:3px solid var(--line); margin:0; padding-left:12px; }
+.warn { color:var(--warn); font-weight:600; }
+ul.todo { list-style:none; padding-left:0; }
+ul.todo > li::before { content:"☐ "; color:var(--accent); }
+ul.done { list-style:none; padding-left:0; }
+ul.done > li::before { content:"☑ "; color:var(--muted); }
+</style>
+</head>
+<body>
+<h1>0003 — y2b 파일을 file_server 로 전환</h1>
+<blockquote>
+<p>작성 2026-11-17 · 이 문서만 보고 이어서 작업할 수 있게 썼다.<br>
+연동 규칙: <code>C:\Users\be98\Desktop\source\python\FlashQuiz\file_server\docs\0007-앱-연동-가이드.html</code> ·
+설계 배경: 같은 폴더 <code>0004-파일-접근-토큰-design.html</code> §13 (y2b)</p>
+</blockquote>
+
+<h2>1. 지금 상태 (한눈에)</h2>
+<table>
+<tr><th>부분</th><th>상태</th></tr>
+<tr><td>y2b 서버 코드</td><td><strong>반영 완료</strong> (2026-11-17, 무중단 reload, 헬스체크 200). 백업 <code>_backup/20261117_file_server</code></td></tr>
+<tr><td>DB</td><td><code>yt_upload</code> 를 비어 있는 상태에서 지우고 새 모양(<code>path</code> 칸 추가, <code>chunks</code> 칸 삭제)으로 다시 만듦. 기존 영상·채널 이미지 0건 → 옮길 데이터 없음</td></tr>
+<tr><td>클라이언트 코드</td><td>수정 완료, <code>npm run build</code> 통과. <span class="warn">커밋 안 함, 배포 안 함</span></td></tr>
+<tr><td>file_server 설정</td><td><span class="warn">y2b 앱의 "브라우저 업로드"가 꺼져 있음</span> → 조각 업로드 403. 사용자가 직접 켜기로 함</td></tr>
+<tr><td>스모크 테스트</td><td>업로드 단계에서 403 으로 멈춤 (설정 대기). 남은 테스트 데이터는 지웠음</td></tr>
+<tr><td>운영 화면</td><td><span class="warn">지금 업로드 불가</span> — 서버의 예전 <code>upload/chunk</code> 를 지웠고, 배포된 프런트는 아직 예전 방식</td></tr>
+</table>
+
+<h2>2. 남은 할 일 (순서대로)</h2>
+<ul class="todo">
+<li>사용자: <code>https://sme0582.duckdns.org/admin/</code> → y2b 앱 → <strong>브라우저 업로드 켜기</strong>, origins 에 <code>https://y2b.tensweb.com</code> (로컬 개발이면 <code>http://localhost:포트</code> 도)</li>
+<li>설정 확인 — y2b 서버에서 preflight 가 204 인지:
+<pre><code>curl -s -o /dev/null -w "%{http_code}\n" -X OPTIONS -H "Origin: https://y2b.tensweb.com" \
+  "https://sme0582.duckdns.org/api/upload/chunk?t=y2b.0.x"</code></pre>
+(<code>t</code> 는 앱 이름만 보므로 가짜 값으로 충분. 403 <code>forbidden</code> = 브라우저 업로드 꺼짐, 403 <code>origin not allowed</code> = origins 누락)</li>
+<li>서버 스모크 테스트 — 전부 ok 여야 한다:
+<pre><code>ssh -i C:\Users\be98\Desktop\source\perm\tensweb\tensweb.pem ubuntu@tensweb.com
+cd /home/www/html/fa_app/app_y2b && /home/ubuntu/.pyenv/versions/3.13.9/bin/python3.13 shell/y2b_smoke.py</code></pre>
+도중에 예외로 멈추면 테스트 회원(<code>smoke{숫자}a/b</code>)·file_server 파일이 남는다 → §6 정리 방법</li>
+<li>프런트 배포 (<code>deploy.ps1</code>) — 사용자가 "테스트 통과 후 배포"로 정함</li>
+<li>브라우저로 실제 확인 (ego-browser): 로그인 → 실제 MP4 업로드(진행률) → 시청 페이지 재생·구간 이동 → 썸네일·프로필 이미지 표시 → 스튜디오에서 썸네일 교체 → 삭제. 개발자 도구에서 영상 주소가 <code>sme0582.duckdns.org/data/y2b/...?t=y2b.</code> 인지</li>
+<li>관리자 화면 미리보기(숨긴 영상 포함)가 302 로 재생되는지</li>
+<li>클라이언트 변경 커밋 (사용자에게 묻고)</li>
+<li>메모리 <code>file-access-token-next-steps</code> 의 2번(y2b) 완료로 갱신</li>
+</ul>
+
+<h2>3. 바뀐 구조</h2>
+<h3>3.1 파일 위치·주소</h3>
+<ul>
+<li>영상·썸네일·채널 프로필 이미지는 모두 file_server(<code>https://sme0582.duckdns.org</code>, 앱 이름 <code>y2b</code>)에 비공개로 있다. y2b 서버 디스크(<code>wwwroot/video</code>, <code>var/y2b_upload</code>, <code>var/y2b_hidden</code>)는 더 쓰지 않는다 (빈 var 폴더 두 개는 지움).</li>
+<li>DB(<code>yt_video.file_path·thumbnail</code>, <code>yt_channel.avatar</code>, <code>yt_upload.path</code>)에는 토큰 없는 경로만: <code>y2b/yyyy/mm/dd/{유닉스초}.{랜덤12}.{mp4|jpg|png|webp}</code></li>
+<li>응답할 때 <code>Y.ok()</code> → <code>sign_media()</code> 가 <code>MEDIA_KEYS</code> (<code>file_path, thumbnail, avatar, channel_avatar, author_avatar</code>)와 <code>hls_path</code> 를 보기 주소로 바꾼다. 유효 <code>SIGN_HOURS = 6</code> (정시 내림, 남은 5~6시간). <strong>새 응답 칸에 파일 경로를 넣으면 MEDIA_KEYS 에 추가</strong>해야 한다.</li>
+<li>볼 권한은 예전처럼 각 API 가 어떤 행을 내보내느냐로 정한다(<code>public_where</code>, <code>can_watch</code>). 서명은 DB 에서 읽은 <code>y2b/</code> 경로만 한다.</li>
+</ul>
+
+<h3>3.2 영상 업로드 흐름</h3>
+<pre><code>브라우저 → y2b   POST upload/start  {filename, size}
+                 로그인·.mp4·max_mb·열린 업로드 3개 확인 → yt_upload 행(token, path)
+                 ← {token, url, path, size, chunk:10MB, t(업로드 토큰, 6시간)}
+브라우저 → file_server  POST {url}?path=&size=&offset=&t=   본문=조각 바이트 (10MB 씩, 앞에서부터)
+                 200 {received, done}  /  409 {detail:{received}} → 그 위치부터  /  403 → upload/renew 한 번
+브라우저 → y2b   POST upload/finish {token, title, description, visibility, duration, thumbnail(파일)}
+                 행 삭제에 성공한 요청 하나만 진행(동시 finish 방지)
+                 → tmp 앞 12바이트를 서명 GET(Range) 으로 읽어 'ftyp' 확인 (아니면 파일 삭제, not_mp4)
+                 → commit [path] (tmp → data). 실패하면 행을 되살려 다시 finish 가능
+                 → 썸네일은 서버 간 data_upload → yt_video 저장
+실패·그만둠  → POST upload/cancel {token}  행 + file_server tmp/.part 삭제</code></pre>
+<ul>
+<li>올리다 만 파일은 file_server 가 24시간 뒤 tmp 정리. 하루 지난 <code>yt_upload</code> 행은 다음 <code>upload/start</code> 때 지운다.</li>
+<li>MP4 검사가 예전엔 첫 조각에서, 이제는 finish 에서 한다 (file_server 는 내용을 보지 않는다).</li>
+</ul>
+
+<h3>3.3 그 밖의 파일</h3>
+<table>
+<tr><th>파일</th><th>올리기</th><th>바꿀 때·지울 때</th></tr>
+<tr><td>채널 프로필 (<code>me/channel</code>)</td><td>y2b 가 받아 <code>data_upload</code> (2MB, jpg/png/webp 바이트 검사)</td><td>DB 갱신 뒤 예전 파일 delete</td></tr>
+<tr><td>썸네일 교체 (<code>me/videos/{id}</code>)</td><td>같음</td><td>같음</td></tr>
+<tr><td>영상 삭제</td><td>—</td><td>DB 삭제 뒤 영상·썸네일 delete (실패해도 진행, 로그 <code>y2b.fileserver</code>)</td></tr>
+<tr><td>관리자 숨김</td><td>—</td><td>파일은 그대로, <code>is_hidden</code> 만. 이미 나간 주소는 최대 6시간 열림 (설계상 수용)</td></tr>
+<tr><td>관리자 미리보기 <code>/api/admin/app/y2b/videos/{id}/media</code></td><td>—</td><td>관리자 확인 후 서명 주소로 302</td></tr>
+</table>
+
+<h2>4. 바뀐 파일</h2>
+<h3>4.1 서버 <code>tensweb.com:/home/www/html/fa_app/app_y2b</code> (git 아님)</h3>
+<table>
+<tr><th>파일</th><th>내용</th></tr>
+<tr><td><code>web/library/fileserver.py</code> (새)</td><td>web.json <code>file_server{url, server_token, secret_key}</code> 읽기, <code>sign_get·sign_scope·sign_put</code>, httpx 로 <code>data_upload·commit·delete</code>, <code>head_bytes</code></td></tr>
+<tr><td><code>web/library/y2b.py</code></td><td>로컬 파일 함수(www, new_media_base, media_full, 조각 폴더, 숨김 폴더) 삭제 → <code>new_path, media_url, hls_url, sign_media, image_ext, upload_info, save_image(async), remove_media(async)</code>. <code>ok()</code> 가 서명</td></tr>
+<tr><td><code>web/library/y2b_admin.py</code></td><td>숨김 시 파일 이동(<code>_move</code>) 삭제</td></tr>
+<tr><td><code>controllers/api/user/app/y2b/upload/</code></td><td><code>start.py·renew.py·cancel.py</code> 새로, <code>finish.py</code> 다시 씀, <code>chunk.py</code> 삭제</td></tr>
+<tr><td><code>.../me/channel.py</code>, <code>.../me/videos/{video_id}/index.py</code></td><td>file_server 저장·삭제</td></tr>
+<tr><td><code>controllers/api/admin/app/y2b/videos/{video_id}/media.py</code></td><td>FileResponse → 302</td></tr>
+<tr><td><code>web/models/app/y2b/upload.py</code> (+ video·channel 주석)</td><td><code>path</code> 칸 추가, <code>chunks</code> 삭제</td></tr>
+<tr><td><code>shell/y2b_smoke.py</code></td><td>새 흐름으로 다시 씀 (이어 올리기, renew, cancel, 동시 finish, 개수 제한, 서명 주소 200·무토큰 403, 이미지 교체 시 예전 파일 404, 삭제 후 404, 숨김). <code>y2b_smoke_fixes.py</code> 는 합치고 삭제</td></tr>
+<tr><td><code>CLAUDE.md</code></td><td>"파일 (file_server)" 절, 공개 규칙·확인 갱신</td></tr>
+</table>
+<p>되돌리기: <code>_backup/20261117_file_server/</code> 의 <code>web/ shell/ CLAUDE.md</code> 를 덮어쓰고 새 파일(fileserver.py, start/renew/cancel.py) 삭제, <code>yt_upload</code> 를 예전 모양으로(백업의 models 로 <code>drop</code> 후 <code>shell/y2b_create_tables.py</code>), <code>./reload.sh</code>.</p>
+
+<h3>4.2 클라이언트 (이 저장소, 커밋 전)</h3>
+<table>
+<tr><th>파일</th><th>내용</th></tr>
+<tr><td><code>src/app/y2b/api.js</code></td><td><code>upload()</code>: start → XHR 로 file_server 직접 전송(진행률, 409 이어 올리기, 403 시 renew 한 번, 연결 실패·5xx 재시도 5번) → finish, 실패 시 cancel. <code>CHUNK</code> 상수 삭제(서버가 <code>chunk</code> 를 준다)</td></tr>
+<tr><td><code>src/components/y2b/comVideoPlayer.vue</code></td><td>재생 오류 시 <code>api.video()</code> 로 새 주소 받아 그 시점부터 이어 재생 (1분에 한 번까지, 그 뒤 오류면 "재생할 수 없음"). HLS 는 <code>xhrSetup</code> 으로 조각 요청에 범위 토큰을 붙임</td></tr>
+<tr><td><code>CLAUDE.md</code></td><td>"영상·파일 (file_server)" 절</td></tr>
+</table>
+<p>업로드 페이지·스튜디오·채널 설정 등 화면은 그대로다 — 응답 주소를 그대로 <code>src</code> 에 쓰기 때문.</p>
+
+<h2>5. 설계(0004 §13)와 다르게 한 점</h2>
+<ul>
+<li>썸네일은 브라우저 → file_server 가 아니라 y2b 서버가 받아 서버 간 업로드. 2MB 이하라 단순하고, 서버에서 이미지 바이트를 검사할 수 있다.</li>
+<li><code>upload/cancel</code> 추가 — 실패한 업로드가 열린 업로드 3개 한도를 하루 동안 막던 문제.</li>
+<li>보기 토큰 6시간 (가이드 예시 24시간보다 짧게) — 숨김·비공개 전환이 빨리 반영되게. 긴 영상은 플레이어가 새 주소로 이어 재생.</li>
+<li>web.json <code>video.transcode</code> 와 <code>library/y2b_transcode.py</code>·<code>shell/y2b_transcode_worker.py</code> 는 로컬 파일 전제라 더 쓰지 않는다. finish 는 항상 <code>status='ready'</code>.</li>
+</ul>
+
+<h2>6. 참고</h2>
+<ul>
+<li>서버 접속: <code>C:\Users\be98\Desktop\source\vue\서버접속.txt</code>, 키 <code>C:\Users\be98\Desktop\source\perm\tensweb\tensweb.pem</code>, 사용자 ubuntu. 파이썬은 <code>/home/ubuntu/.pyenv/versions/3.13.9/bin/python3.13</code> (<code>python3.13</code> 이 PATH 에 없음)</li>
+<li>반영: 서버 폴더에서 <code>./reload.sh</code> (문법 검사 → 무중단 reload → 헬스체크)</li>
+<li>file_server 403 원인: file_server 서버(sme0582)의 <code>logs/app.log</code> 에 <code>file auth deny ... reason=</code> (가이드 §7)</li>
+<li>스모크가 중간에 멈춰 데이터가 남았을 때: <code>shell/y2b_smoke.py</code> 를 복사해 <code>TAG = 'smoke{그때 숫자}'</code>, 맨 끝 <code>main()</code> → <code>asyncio.run(cleanup())</code> 로 바꿔 <code>shell/</code> 안에서 실행 후 삭제 (회원·영상·업로드 행·file_server 파일을 지운다)</li>
+<li>남은 큰 일: HLS 를 file_server 업로드 옵션으로 (새 문서 필요, <code>/data/</code> CORS 추가), 영상 삭제 시 HLS 폴더 삭제는 그때 정한다</li>
+</ul>
+</body>
+</html>

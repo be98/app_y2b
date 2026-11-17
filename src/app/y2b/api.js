@@ -4,7 +4,24 @@ import axios from 'axios'
 
 const U = '/api/user/app/y2b'
 const A = '/api/admin/app/y2b'
-export const CHUNK = 10 * 1024 * 1024 // 서버 library/y2b.py CHUNK 와 같은 값
+
+// file_server 로 조각 하나 (원본 바이트, 쿠키 없이). 진행률 때문에 XHR. → {status, body} (연결 실패는 status 0)
+function sendChunk(up, offset, blob, onLoaded) {
+  return new Promise((resolve) => {
+    const x = new XMLHttpRequest()
+    const q = new URLSearchParams({ path: up.path, size: up.size, offset, t: up.t })
+    x.open('POST', `${up.url}?${q}`)
+    x.setRequestHeader('Content-Type', 'application/octet-stream')
+    x.upload.onprogress = (e) => onLoaded(e.loaded || 0)
+    x.onload = () => {
+      let body = {}
+      try { body = JSON.parse(x.responseText) || {} } catch (e) { /* 본문 없음 */ }
+      resolve({ status: x.status, body })
+    }
+    x.onerror = x.ontimeout = () => resolve({ status: 0, body: {} })
+    x.send(blob)
+  })
+}
 
 const data = (p) => p.then((r) => r.data).catch(() => ({ success: 0, message: '서버에 연결할 수 없습니다' }))
 
@@ -44,20 +61,43 @@ export default {
   saveVideo: (id, params) => post(`${U}/me/videos/${id}`, params),
   deleteVideo: (id) => del(`${U}/me/videos/${id}`),
 
-  // 조각 업로드. onProgress(0~1). 반환: finish 응답 또는 실패한 조각의 응답
+  // 영상 업로드: y2b 서버에서 경로·업로드 토큰을 받고(start), 10MB 조각을 file_server 로 직접 보낸 뒤(이 서버를 거치지 않음) finish.
+  // onProgress(0~1). 반환: finish 응답 또는 실패 응답({success:0, message})
   async upload(file, info, onProgress) {
-    const chunks = Math.ceil(file.size / CHUNK)
-    let token = ''
-    for (let i = 0; i < chunks; i++) {
-      const part = file.slice(i * CHUNK, (i + 1) * CHUNK)
-      const r = await post(U + '/upload/chunk', { token, index: i, filename: file.name, total_size: file.size, chunk: part }, {
-        onUploadProgress: (e) => onProgress && onProgress((i * CHUNK + (e.loaded || 0)) / file.size),
-      })
-      if (!r.success) return r
-      token = r.token
+    let up = await post(U + '/upload/start', { filename: file.name, size: file.size })
+    if (!up.success) return up
+    const fail = async (r) => {
+      await post(U + '/upload/cancel', { token: up.token }) // 열린 업로드 한도(3개)를 바로 비운다
+      return r
+    }
+    let offset = 0
+    let retry = 0
+    let renewed = false
+    for (;;) {
+      const end = Math.min(offset + up.chunk, file.size)
+      const r = await sendChunk(up, offset, file.slice(offset, end), (n) => onProgress && onProgress((offset + n) / file.size))
+      const received = r.body.detail && typeof r.body.detail.received === 'number' ? r.body.detail.received : -1
+      if (r.status === 200) {
+        retry = 0
+        if (r.body.done) break
+        offset = r.body.received
+      } else if (r.status === 409 && received >= 0 && retry++ < 5) {
+        offset = received // 이어 올리기 — file_server 가 받은 곳부터
+      } else if (r.status === 403 && !renewed) {
+        renewed = true // 업로드 토큰(6시간)이 끝났을 수 있다
+        const n = await post(U + '/upload/renew', { token: up.token })
+        if (!n.success) return fail(n)
+        up = n
+      } else if ((r.status === 0 || r.status >= 500) && retry++ < 5) {
+        if (received >= 0) offset = received
+        await new Promise((ok) => setTimeout(ok, 2000 * retry))
+      } else {
+        return fail({ success: 0, message: r.status === 0 ? '파일 서버에 연결할 수 없습니다' : `업로드에 실패했습니다 (${r.status})` })
+      }
     }
     onProgress && onProgress(1)
-    return post(U + '/upload/finish', { token, ...info })
+    const r = await post(U + '/upload/finish', { token: up.token, ...info })
+    return r.success ? r : fail(r)
   },
 
   admin: {
